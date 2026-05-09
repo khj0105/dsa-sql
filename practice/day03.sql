@@ -23,15 +23,19 @@ select count(distinct CountryCode) from city; # 232
 
 -- 3) 한국에 도시는 총 몇개의 도시가 있는지 확인하고 도시이름을 조회해 보세요
 desc city;
-select 	count(distinct Name) as 도시개수 from city
+select 	count(Name) as 도시개수 from city
 where CountryCode like 'KOR'; -- 70
 
--- 4) 한국의 지역명이 "C"로 시작되는 지역의 도시 수는?
+-- 4) 한국의 지역명이 “C”로 시작하는 지역의 도시 수는 몇개이고, 어떤 도시가 있는지 확인
 desc city;
 select * from city;
 -- 정답 : 21개 (KOR, C로 시작하는 지역의 도시갯수)
-select count(distinct Name) from city
-where CountryCode like 'KOR' && District like 'C%';
+select count(Name) from city
+where CountryCode like 'KOR' and District like 'C%';
+
+select Name, District from city
+where CountryCode like 'KOR' AND District like 'C%';
+-- ORDER BY District;
 
 -- 정답 : 5개 (C로 시작하는 지역명)
 SELECT distinct District as 지역명 from city
@@ -44,7 +48,7 @@ where CountryCode like 'KOR'
 and District like binary 'C%'; # 데이터를 대소문자 가리도록
 
 -- 5. 한국의 지역명에서 2번째 글짜가 'y'인 경우의 도시명은 어떤 도시들이 있나요?
-SELECT District Name from city
+SELECT District, Name from city
 WHERE CountryCode like 'KOR'
 and  District like '_y%';
 
@@ -55,11 +59,11 @@ WHERE CountryCode like 'KOR'
 and  District like '_y%';
 
 -- 6. 전세계에서 도시의 인구가 300만명을 넘는 도시는 몇개가 있는지 확인하세요.
-SELECT COUNT(distinct Name) from city
+SELECT COUNT(Name) from city
 WHERE  3000000 <= Population;
 
 -- 7. 한국에서 인구가 70만명 ~ 100만명 사이의 도시는 어딘지 확인하세요.
-SELECT distinct Name from city
+SELECT Name from city
 WHERE CountryCode like 'KOR'
 and 700000 <= Population and Population <= 1000000;
 
@@ -75,10 +79,10 @@ WHERE
 (Name like '___j%' or Name like '___w%') -- like를 먼저하고 50만명이상을 구한다.
 AND Population > 500000;
 
-select name, Population, CountryCode
-from city
-where name like '___j%' or name like '___w%'
-and Population >= 500000;
+-- select name, Population, CountryCode
+-- from city
+-- where name like '___j%' or name like '___w%'
+-- and Population >= 500000;
 
 select count(name) -- 67
 # Population, CountryCode
@@ -101,7 +105,7 @@ where 1 in (2,3,4,5) ==> False*/
 -- 9. 인구 수가 가장 많은 도시 5곳을 출력하시오. ( city 테이블 활용)
 SELECT name  
 FROM city
-Order by Population DESC
+Order by Population desc
 Limit 5; 
 
 -- 10. 세계에서 특정 언어가 해당지역에서 5% 미만으로 사용 되고 있지만, 공식적인 언어로 지정된 경우는 몇 건인가?
@@ -109,19 +113,19 @@ Limit 5;
 desc countrylanguage;
 select * from countrylanguage;
 
-SELECT Percentage
+SELECT *
 FROM countryLanguage
-WHERE 5 < Percentage and IsOfficial = 'T'
+WHERE  Percentage < 5  and IsOfficial = 'T'
 ORDER BY Percentage desc
 LIMIT 10;
 
-SELECT Count(Percentage)
+SELECT Count(*)
 FROM countryLanguage
-WHERE 5 < Percentage and IsOfficial = 'T';
+WHERE Percentage < 5 and IsOfficial = 'T';
 
 SELECT Language, Percentage
 FROM countryLanguage
-WHERE 5 < Percentage and IsOfficial = 'T'
+WHERE Percentage < 5 and IsOfficial = 'T'
 ORDER BY Percentage desc
 LIMIT 10;
 
@@ -138,7 +142,7 @@ ORDER BY District asc, Population desc;
 SELECT ROW_NUMBER() OVER(ORDER BY District asc, Population desc) District, Population
 FROM city
 ORDER BY District asc, Population desc
-LIMIT 10 OFFSET 22;
+Limit 10 Offset 22;
 
 -- 정형데이터: 형태(o), 연산(o) SQL
 -- 반정형데이터: 형태(o), 연산(x)
