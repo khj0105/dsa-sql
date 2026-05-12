@@ -211,29 +211,40 @@ from scit_tab;
 # Q2. 단일행 함수
 -- 1. 단일행 함수를 활용하여 여행가방(luggage) 비번에 해당하는 랜덤정수 3자리를 만드시오.
 -- (단, 매번 실행할 때, 번호는 바뀌도록 구성)
--- create table luggage (
--- 		pw int(3)
--- );
+create table luggage (
+		pw int(3)
+);
 
--- select * from luggage;
--- select into luggage values(rand(3))as '난수 3자리'
--- from luggage;
+select * from luggage;
+insert into luggage (pw)
+select floor(rand() * 900 +100) as '난수 3자리';
+select * from luggage;
 
 
 -- 2. 한미일(KOR, USA, JPA)에서 인구가 많은 도시 top10을 출력하시오.
 use world;
 select * from city;
 
-select contcat_ws(' : ', CountryCode, Name, Name
-
+select concat_ws(' : ', CountryCode, District, Name) as "'한미일'에서 인구 top10 도시명",
+		concat(format(population, 0), '명') as '인구'
+from city
+where CountryCode in ('KOR', 'USA', 'JPN')
+order by population desc
+limit 10;
 
 -- 3. 데이터 구조(사전작업 필요)가 다음과 같을 때, 국가코드와 인구수 데이터를 분리하세요.
+drop table if exists t_city;
 
+create table t_city
+select concat(CountryCode, Name, ' ', Population) as city_info
+from city
+order by CountryCode desc, Population desc
+limit 30;
 
+select city_info, LEFT(city_info, 3) as '국가코드', SUBSTRING_INDEX(city_info, ' ', -1) as '인구'
+from t_city;
 
-
-
-
-
-
-
+-- 4. 특정 날짜가 주어졌을 때, 해당월 마지막날의 요일을 출력하시오
+select '2025-08-06 16:15:08' as '특정날짜',
+LAST_DAY('2025-08-06 16:15:08') as '특정날짜의 마지막날',
+DATE_FORMAT(LAST_DAY('2025-08-06 16:15:08'), '%W') as '요일';
