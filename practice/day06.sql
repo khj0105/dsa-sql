@@ -59,7 +59,7 @@ SELECT pname AS "이름", concat(truncate(page, -1), '대') as "연령대";
 2004~2019년 개봉한 영화관련 정보 (35,151건)
 https://www.kofic.or.kr/kofic/businexx/infm/introData.do
 */
-
+drop table box_office;
 create table box_office (
     seq_no          INT PRIMARY KEY,
     years           SMALLINT,
@@ -93,9 +93,23 @@ use world;
 select * from country;
 desc country;
 
-select row_number() over(order by population desc) as "NO.", code as '국가코드', concat(name, ' ', '<',continent,'>') as '국가 <대륙>', region as '대륙내 지역', format(population, 0) as '인구' from country
+select row_number() over(order by population desc) as "NO.", code as '국가코드', 
+concat(name, ' ', '<',continent,'>') as '국가 <대륙>', region as '대륙내 지역', format(population, 0) as '인구' from country
 where population between 40000000 and 60000000
 order by population desc;
+
+# 강사님 풀이
+use world;
+desc country;
+
+select row_number() over(order by Population desc) as "No", 
+	code as 국가코드, 
+	concat(name,' <', Continent, '>') as "국가<대륙>", 
+	Region as "대륙내 지역", 
+	format(Population, 0) as "인구"
+from country
+where Population between 40000000 and 60000000
+order by Population desc;
 
 
 -- 2. 국가별 독립년도 정보를 확인하여 가장 일찍 개국한 나라 top 10을 조회하세요.
@@ -124,13 +138,109 @@ where indepyear is not null -- and indepyear < 0 = 'BC' + indepyear or indepyear
 order by indepyear
 limit 10;
 
+# 강사님 풀이
+desc country;
+select row_number() over (order by IndepYear) as "NO.",
+		Name as 국가명,
+		concat(case when IndepYear < 0 then "BC "
+			 when IndepYear > 0 then "AD "
+             end, abs(IndepYear)) as 개국년도
+from country
+where IndepYear is not null
+order by IndepYear
+limit 10;
+
 -- 3. 2019년 개봉영화 중에서 하기 조건에 부합하는 영화정보를 조회하시오.
 -- # use youDB; desc box_office;
 -- * 관객 : 300 ~ 700만명 or
 -- * 매출 : 180 ~ 500억원
+use youDB;
+select * from box_office;
+
+-- select 
+-- 	row_number() over(order by sale_amt desc) as 'NO.', 
+--     years as '제작년도', 
+--     movie_name as '영화제목', release_date as '개봉일', 
+--     sale_amt  as '관객수', 
+-- 	concat(showing_count, '억') as '총매출' from box_office
+-- where  
+-- 	(sale_amt between 3000000 and 7000000) 
+--     or (showing_count between 180 and 500) 
+--     and
+-- years = 2019 and release_date is not null
+-- order by sale_amt desc;
+use youDB;
+select * from box_office;
+
+select 
+	row_number() over(order by sale_amt desc) as 'NO.', 
+    years as '제작년도', 
+    movie_name as '영화제목',
+    concat(substr(release_date, 1, 4),'-', substr(monthname(release_date), 1, 3), '-', day(release_date)) as '개봉일',
+    concat(format(audience_num, 0), '명')as '관객수',
+    concat(substring(sale_amt, 1,3), '억') as '총매출'
+    from box_office
+where  
+	years = 2019
+    and(
+		audience_num between 3000000 and 7000000
+        or
+        sale_amt between 18000000000 and 50000000000)
+order by 
+	sale_amt desc;
+    
+# 강사님 풀이
+use youDB;
+desc box_office;
+
+select row_number() over(order by sale_amt desc) as "No.",
+	years as 제작년도, 
+    movie_name as 영화제목, 
+    date_format(release_date, '%Y-%b-%e') as 개봉일, 
+	concat(format(audience_num, 0), '명') as 관객수, 
+    -- sale_amt,
+    -- sale_amt/pow(10,8), 
+    concat(round(sale_amt/pow(10,8),0),'억') as 총매출 -- pow(x,y)는 x의 y승
+from box_office
+-- where date_format(release_date, '%Y') = '2019';
+WHERE year(release_date) = '2019'
+and (audience_num between 3000000 and 7000000
+or sale_amt/pow(10,8) between 180 and 500)
+order by sale_amt desc;
+
 
 -- 4. 2014년에 제작되었지만 2018~2019년에 개봉한 영화는?
 -- # 여기에서는 years (제작년도), release_date (개봉시점)로 해석
+select * from box_office;
+select seq_no, 
+	   years, 
+       ranks, 
+       movie_name, 
+       release_date, 
+       sale_amt, 
+       share_rate, 
+       audience_num,
+	   screen_num, 
+       showing_count, 
+       rep_country, 
+       countries, 
+       distributor, 
+       movie_type,
+       genre, 
+       director
+from box_office
+where years = 2014 and (substr(release_date, 1, 4) = 2018 or substr(release_date, 1, 4) = 2019) 
+-- and release_date between 2018 and 2019
+order by seq_no;
+
+# 강사님 풀이 2014년 제작(years), 2018-2019(release_date) 개봉
+desc box_office;
+select release_date from box_office; # 2004-03-12 00:00:00
+
+select * from box_office
+where years = 2014
+and release_date between '2018-01-01' and '2019-12-31'; 
+-- year(release_date) between '2018' and '2019';
 
 -- 5. 2017년 11월에 개봉한 영화 중에서 하기 요구사항에 부합되는 결과를 조회하세요.
 -- # use youDB; desc box_office;
@@ -138,5 +248,97 @@ limit 10;
 -- 영화제목에 " : " 이 들어간 영화
 -- -> select list : 영화, 개봉년월, 감독그룹
 
+# 강사님 풀이
+desc box_office;
+select  
+	distinct movie_name as 영화명, 
+    extract(year_month from release_date) as 개봉년월, 
+    replace(director, ',', '/') as 감독그룹
+from box_office
+where extract(year_month from release_date) = 201711
+and replace(director, ',', '/') like '%/%'
+and movie_name like '%:%';
+
 -- 6. 2018~2019년에 개봉한 한국 및 미국영화 총 관객수가 1,000만명이 넘은 영화는?
 -- # use youDB; desc box_office;
+
+# 강사님 풀이
+desc box_office;
+select 
+		years as 제작년도, 
+        movie_name as 영화명, 
+        rep_country as 배포국가, 
+        extract(year_month from release_date) as 개봉년월,
+        format(audience_num, 0) as 관객수, 
+        concat(round(sale_amt/pow(10,8),0), '억원') as 매출 
+from box_office
+where year(release_date) in (2018, 2019)
+and audience_num >= 10000000 
+and rep_country in ('한국','미국')
+order by audience_num desc;
+
+
+
+
+
+# ■ Group 함수
+-- select 리스트절에서 그룹함수를 제외한 모든 컬럼명은 group by 절에 있어야한다.
+-- group by절에 오는 컬럼명 일지라도 select 리스트에 반드시 나올 필요는 없다.
+
+-- 1. 각 국가별 도시의 갯 수가 몇개 있는지 확인하고, 보유 도시수 기준으로 top15를 조회하세요.
+-- # 조회내용에서 총계 산출도 추가해서 조회해 보세요.
+use world;
+desc city;
+
+select 
+	CountryCode as 국가코드,
+    count(name) as 도시수 -- 그룹 함수
+	-- Name as 도시명
+from city
+group by CountryCode with rollup -- with rollup 는 전체 도시
+order by 2 desc
+limit 15;
+
+select count(name) from city;
+
+-- 2. 인구가 200만명이 넘는 도시는 각 국가별로 몇개인지 확인하세요.
+-- # 조회내용에서 200만명이 넘는 도시를 4개 이상 보유하고 있는 국가는 어디인지 확인하세요.
+use world;
+desc city;
+select
+	CountryCode, 
+    count(Name) as "num of city"
+from city
+where Population >= 20000000
+group by name >= 4;
+
+-- 4. 2004~2013년(10년간) 까지 년도별 개봉한 영화 수와 각 년도별 상/하반기 개봉한 영화 수
+-- 또는 요일별 개봉영화수를 확인하시오. (# 정렬: 년도별 오름차순, 총 결산 표기) 
+-- 힌트: x,y,z축 2004~2013년 영화, 년도별 개봉수, 년도별에서 상/하반기 개봉수
+use youdb;
+desc box_office;
+select -- movie_name, release_date, quarter(release_date),
+	   year(release_date) as 년도,
+	   format(count(*),0) as "개봉영화 수", -- 그룹함수
+		format(sum(case when quarter(release_date) in (1,2) then 1 else 0 end), 0) as "상반기 개봉영화수", -- 그룹함수
+        format(sum(case when quarter(release_date) in (3,4) then 1 else 0 end), 0) as "하반기 개봉영화수"  -- 그룹함수
+from box_office
+where year(release_date) between 2004 and 2013
+group by year(release_date) with rollup
+order by 1;
+
+-- 10.
+# 그룹함수 Quiz 10
+# 년도별, 100만명 관객이 본 영화 수, 국가별
+use youDB;
+desc box_office;
+select count(distinct rep_country) from box_office; # 81개 국가
+
+select  year(release_date) as 년도, count(*) as "관객 100만명 이상의 영화수",
+		sum(case rep_country when '한국' then 1 else 0 end) as 한국횟수, 
+		sum(case rep_country when '미국' then 1 else 0 end) as 미국횟수, 
+		sum(case rep_country when '일본' then 1 else 0 end) as 일본횟수
+from box_office
+where year(release_date) between 2015 and 2019
+and audience_num/pow(10,4) >= 100
+group by year(release_date);
