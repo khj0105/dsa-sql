@@ -303,25 +303,46 @@ select count(name) from city;
 
 -- 2. 인구가 200만명이 넘는 도시는 각 국가별로 몇개인지 확인하세요.
 -- # 조회내용에서 200만명이 넘는 도시를 4개 이상 보유하고 있는 국가는 어디인지 확인하세요.
+-- use world;
+-- desc city;
+-- select
+-- 	CountryCode, 
+--     count(Name) as "num of city"
+-- from city
+-- where Population >= 2000000
+-- group by name >= 4;
+
+-- 2.
 use world;
 desc city;
 select
-	CountryCode, 
-    count(Name) as "num of city"
+	CountryCode,
+    Count(Name) as "num of city"
 from city
-where Population >= 20000000
-group by name >= 4;
+where Population >= 2000000
+group by CountryCode
+having Count(Name) >= 4
+order by Count(Name) desc;
 
 -- 3. 독립년도 정보가 있는 국가와 없는 국가 수는 어떻게 되는지 조회하세요.
+use world;
+desc country;
+
+select
+	Count(*) as "총국가수",
+    Count(Case when IndepYear is null Then 1 End) as "독립년도가 없는 국가",
+    Count(Case when IndepYear is not Null Then 1 End) as "독립년도가 있는 국가"
+from country;
 
 -- 4. 2004~2013년(10년간) 까지 년도별 개봉한 영화 수와 각 년도별 상/하반기 개봉한 영화 수
 -- 또는 요일별 개봉영화수를 확인하시오. (# 정렬: 년도별 오름차순, 총 결산 표기) 
 -- 힌트: x,y,z축 2004~2013년 영화, 년도별 개봉수, 년도별에서 상/하반기 개봉수
+-- (1)
 use youdb;
 desc box_office;
 select -- movie_name, release_date, quarter(release_date),
 	   year(release_date) as 년도,
-	   format(count(*),0) as "개봉영화 수", -- 그룹함수
+	   format(count(*),0) as "년도별 개봉영화 수", -- 그룹함수
 		format(sum(case when quarter(release_date) in (1,2) then 1 else 0 end), 0) as "상반기 개봉영화수", -- 그룹함수
         format(sum(case when quarter(release_date) in (3,4) then 1 else 0 end), 0) as "하반기 개봉영화수"  -- 그룹함수
 from box_office
@@ -329,13 +350,63 @@ where year(release_date) between 2004 and 2013
 group by year(release_date) with rollup
 order by 1;
 
+-- (2)
+use youdb;
+
+select
+    year(release_date) as "년도",
+    format(count(*), 0) as "년도별 개봉영화 수",
+    format(sum(case when dayofweek(release_date) = 1 then 1 else 0 end), 0) as "일-개봉",
+    format(sum(case when dayofweek(release_date) = 2 then 1 else 0 end), 0) as "월-개봉",
+    format(sum(case when dayofweek(release_date) = 3 then 1 else 0 end), 0) as "화-개봉",
+    format(sum(case when dayofweek(release_date) = 4 then 1 else 0 end), 0) as "수-개봉",
+    format(sum(case when dayofweek(release_date) = 5 then 1 else 0 end), 0) as "목-개봉",
+    format(sum(case when dayofweek(release_date) = 6 then 1 else 0 end), 0) as "금-개봉",
+    format(sum(case when dayofweek(release_date) = 7 then 1 else 0 end), 0) as "토-개봉"
+    
+from box_office
+where year(release_date) between 2004 and 2013
+group by year(release_date) with rollup
+order by
+	case when year("년도") is null then 0 else 1 end asc,
+    year(release_date) asc;
+
 # use youDB; desc box_office;
 -- 5. 2016년 개봉한 영화 배급사 정보조회 ?
 -- 단, 배급사의 총 매출액 산출 시, 개별영화 매출 2억 미만은 제외한 총 매출이 100억~1,500억에 해당하는 배급사만 조회
 -- select list : 배급사, 총개봉수-2016, 매출-2016, 분기별 제작영화 수(Q1 ~Q4)
+use youdb;
+
+select
+	distributor as "배급사",
+    format(count(*), 0) as "총개봉수-2016",
+    concat(format(round(sum(sale_amt) / pow(10, 8), 0), 0), '억') as "매출-2016",
+    
+    format(sum(case when quarter(release_date) = 1 then 1 else 0 end), 0) as "Q1",
+    format(sum(case when quarter(release_date) = 2 then 1 else 0 end), 0) as "Q2",
+    format(sum(case when quarter(release_date) = 3 then 1 else 0 end), 0) as "Q3",
+    format(sum(case when quarter(release_date) = 4 then 1 else 0 end), 0) as "Q4"
+
+from box_office
+where year(release_date) = 2016
+	  and sale_amt >= 200000000
+group by distributor
+having sum(sale_amt) between 10000000000 and 150000000000
+order by sum(sale_amt) desc;
+
 
 # use youDB; desc box_office;
 -- 6. 영화유형별 매출을 하기와 같이 출력하세요.
+use youdb;
+
+select
+	case when grouping(movie_type) = 1 then '총계' else movie_type end as "영화유형",
+    concat(format(round(sum(sale_amt) / pow(10, 8), 0), 0), '억') as "매출"
+from box_office
+group by movie_type with rollup
+order by
+	grouping(movie_type) desc,
+    sum(sale_amt) desc;
 
 # use world; desc country;
 -- 7. 대륙별 면적크기, 인구수, 국가수를 조회하여 하기 물음에 답하시오.
@@ -343,14 +414,82 @@ order by 1;
 -- 2) 가장 인구가 많은 대륙은 어디인가요?
 -- 3) 가장 국가가 많은 대륙은 어디인가요?
 -- 4) 인구가 가장 적은 대륙은 어디인가요?
+use world;
+
+-- 1) 가장 면적이 큰 대륙은 어디인가요?
+select continent as "대륙", format(sum(surfacearea), 0) as "총면적"
+from country
+group by continent
+order by sum(surfacearea) desc
+limit 1;
+
+
+-- 2) 가장 인구가 많은 대륙은 어디인가요?
+select continent as "대륙", format(sum(population), 0) as "총인구수"
+from country
+group by continent
+order by sum(population) desc
+limit 1;
+
+-- 3) 가장 국가가 많은 대륙은 어디인가요?
+select continent as "대륙", count(*) as "국가수"
+from country
+group by continent
+order by count(*) desc
+limit 1;
+
+-- 4) 인구가 가장 적은 대륙은 어디인가요?
+select
+	continent as "대륙",
+    format(sum(population), 0) as "총인구수"
+from country
+group by continent
+order by sum(population) asc
+limit 1;
 
 # use youDB; desc box_office;
 -- 8. 2008~2018까지 상위 1~20위까지 영화 매출과 나머지 순위 영화매출을 비교하시오.
 -- 년도는 release_date 기준
+use youdb;
+
+select
+	sub.movie_year as "년도",
+    concat(format(round(sum(case when sub.ranks <= 20 then sub.sale_amt else 0 end) / pow(10, 8), 0), 0), '억') as "1~20위 매출",
+    concat(format(round(sum(case when sub.ranks > 20 then sub.sale_amt else 0 end) / pow(10, 8), 0), 0), '억') as "나머지 매출",
+	format(count(case when sub.ranks > 20 then 1 end), 0) as "20위 이상 영화숫자"
+from (
+	select
+		year(release_date) as movie_year,
+        sale_amt,
+        row_number() over (partition by year(release_date) order by sale_amt desc) as ranks
+	from box_office
+    where year(release_date) between 2008 and 2018
+) sub
+group by sub.movie_year
+order by sub.movie_year asc;
+
+
 
 # use youDB; desc box_office;
 -- 9. 2010~2019까지 년도별 국가별 관객수를 비교분석하세요. (대상국가 : 한국, 미국, 일본, 영국, 프랑스, 독일)
 -- 년도는 release_date 기준
+use youdb;
+desc box_office;
+
+select
+	year(release_date) as "년도",
+    format(sum(audience_num), 0) as "총 관객수",
+    format(sum(case when rep_country = '한국' then audience_num else 0 end), 0) as "한국관객",
+    format(sum(case when rep_country = '미국' then audience_num else 0 end), 0) as "미국관객",
+    format(sum(case when rep_country = '일본' then audience_num else 0 end), 0) as "일본관객",
+    format(sum(case when rep_country = '영국' then audience_num else 0 end), 0) as "영국관객",
+    format(sum(case when rep_country = '프랑스' then audience_num else 0 end), 0) as "프랑스관객",
+    format(sum(case when rep_country = '독일' then audience_num else 0 end), 0) as "독일관객"
+from box_office
+where year(release_date) between 2010 and 2019
+group by year(release_date)
+order by year(release_date) desc;
+
 
 -- 10.
 # 그룹함수 Quiz 10
