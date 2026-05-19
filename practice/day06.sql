@@ -53,8 +53,11 @@ select pid, pname, page,
         else '70대 이상' end as '연령대'
  from m_emp;
  
-SELECT pname AS "이름", concat(truncate(page, -1), '대') as "연령대";
-
+-- SELECT pname AS "이름", concat(truncate(page, -1), '대') as "연령대";
+SELECT
+	pname AS "이름",
+    concat(FLOOR(page / 10) * 10, '대') as "연령대"
+from m_emp;
 /*
 2004~2019년 개봉한 영화관련 정보 (35,151건)
 https://www.kofic.or.kr/kofic/businexx/infm/introData.do
@@ -84,6 +87,7 @@ use youdb;
 select user(), database();
 
 desc box_office;
+select * from box_office;
 
 select count(*) from box_office;
 
@@ -363,7 +367,6 @@ select
     format(sum(case when dayofweek(release_date) = 5 then 1 else 0 end), 0) as "목-개봉",
     format(sum(case when dayofweek(release_date) = 6 then 1 else 0 end), 0) as "금-개봉",
     format(sum(case when dayofweek(release_date) = 7 then 1 else 0 end), 0) as "토-개봉"
-    
 from box_office
 where year(release_date) between 2004 and 2013
 group by year(release_date) with rollup
